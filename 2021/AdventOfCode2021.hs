@@ -1,12 +1,13 @@
 module AdventOfCode2021 where
 
-import Data.List       (transpose)
+import Data.List       (inits, isPrefixOf, transpose)
 import Data.List.Split (splitOn)
 
 day01 :: IO ()
 day01 = do
   fileData <- readFile "data/2021/day01.txt"
   let depths    = map read $ lines fileData
+
       solution1 = depthIncreases depths
       solution2 = depthWindows depths
 
@@ -52,21 +53,39 @@ day03 :: IO ()
 day03 = do
   fileData <- readFile "data/2021/day03.txt"
   let binaries  = lines fileData
-      solution1 = findPowerConsumption (transpose binaries)
+      pairs     = map mkPairs $ transpose binaries
+      solution1 = findPowerConsumption pairs
+      solution2 = findLifeSupport binaries pairs
 
   putStrLn $ "Part 1: " <> show solution1
+  putStrLn $ "Part 2: " <> show solution2
 
-findPowerConsumption :: [String] -> Int
-findPowerConsumption bs = (binToInt $ reverse gamma) * (binToInt $ reverse epsilon)
-  where mkPairs = foldr (\x (a, b) -> if x == '0'
-                                         then (a + 1, b)
-                                         else (a, b + 1))
-                        (0,0)
-        pairs   = map mkPairs bs
-        gamma   = map (\(x, y) -> if x > y then 0 else 1) pairs
-        epsilon = map (\(x, y) -> if x > y then 1 else 0) pairs
+findPowerConsumption :: [(Int, Int)] -> Int
+findPowerConsumption bs = (mkInt $ getGamma bs) * (mkInt $ getEpsilon bs)
+  where mkInt = binToInt . reverse
+
+mkPairs :: String -> (Int, Int)
+mkPairs = foldr (\x (a, b) -> if x == '0' then (a + 1, b) else (a, b + 1)) (0,0)
+
+getGamma :: [(Int, Int)] -> [Int]
+getGamma = map (\(x, y) -> if x > y then 0 else 1)
+
+getEpsilon :: [(Int, Int)] -> [Int]
+getEpsilon = map (\(x, y) -> if x > y then 1 else 0)
 
 binToInt :: [Int] -> Int
 binToInt bin = go bin 0
   where go []     _ = 0
         go (x:xs) n = (x * (2^n)) + (go xs (n + 1))
+
+findLifeSupport :: [String] -> [(Int, Int)] -> Int
+findLifeSupport bs ps = (reduceBins bs mins) * (reduceBins bs maxs)
+  where mins = zip [0..] $ getEpsilon ps
+        maxs = zip [0..] $ getGamma ps
+
+reduceBins :: [String] -> [(Int, Int)] -> Int
+reduceBins bs [] = binToInt $ reverse $ map read bs
+reduceBins bs ((n, a):xs)
+  | length fs == 1 = reduceBins fs []
+  | otherwise      = reduceBins fs xs
+    where fs = filter (\y -> y !! n == toEnum a) bs
