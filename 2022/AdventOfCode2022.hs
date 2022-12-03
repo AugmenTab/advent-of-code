@@ -42,7 +42,17 @@ moveFromText i txt =
     "X" -> pure Rock
     "Y" -> pure Paper
     "Z" -> pure Scissors
-    _   -> fail $ "Unrecognized Move " <> T.unpack txt <> "at line " <> show i
+    _   -> fail $ "Unrecognized Move " <> T.unpack txt <> " at line " <> show i
+
+pickLosingMove :: Move -> Move
+pickLosingMove Rock     = Scissors
+pickLosingMove Paper    = Rock
+pickLosingMove Scissors = Paper
+
+pickWinningMove :: Move -> Move
+pickWinningMove Rock     = Paper
+pickWinningMove Paper    = Scissors
+pickWinningMove Scissors = Rock
 
 pointsForMove :: Move -> Int
 pointsForMove Rock     = 1
@@ -58,13 +68,41 @@ pointsForMatch (o, p) =
     EQ -> 3
     LT -> 6
 
+data Result
+  = Lose
+  | Draw
+  | Win
+
+resultFromText :: MonadFail m => Int -> T.Text -> m Result
+resultFromText i txt =
+  case txt of
+    "X" -> pure Lose
+    "Y" -> pure Draw
+    "Z" -> pure Win
+    _   -> fail $ "Unrecognized Result " <> T.unpack txt <> " at line " <> show i
+
 mkMatch :: MonadFail m => (Int, [T.Text]) -> m Match
 mkMatch (i, (f:s:[])) = do
-  f <- moveFromText i f
-  s <- moveFromText i s
-  pure (f, s)
+  f' <- moveFromText i f
+  s' <- moveFromText i s
+  pure (f', s')
 
 mkMatch (i, _) = fail $ "Bad input on line " <> show i
+
+mkMatchWithResult :: MonadFail m => (Int, [T.Text]) -> m Match
+mkMatchWithResult (i, (m:r:[])) = do
+  m' <- moveFromText i m
+  r' <- resultFromText i r
+
+  let playerMove =
+        case r' of
+          Lose -> pickLosingMove m'
+          Draw -> m'
+          Win  -> pickWinningMove m'
+
+  pure (m', playerMove)
+
+mkMatchWithResult (i, _) = fail $ "Bad input on line " <> show i
 
 foldMatches :: Int -> Match -> Int
 foldMatches acc match@(o, p) = acc + pointsForMatch match + pointsForMove p
@@ -72,6 +110,11 @@ foldMatches acc match@(o, p) = acc + pointsForMatch match + pointsForMove p
 day02 :: IO ()
 day02 = do
   lines <- T.lines . T.pack <$> readFile "data/2022/day02.txt"
-  matches <- mapM (mkMatch . fmap (T.splitOn " ")) $ L.zip [1..] lines
 
-  putStrLn . show $ L.foldl' foldMatches 0 matches
+  let indexed = fmap (T.splitOn " ") <$> L.zip [1..] lines
+
+  matches  <- mapM mkMatch indexed
+  matches' <- mapM mkMatchWithResult indexed
+
+  putStrLn $ "From moves: " <> show (L.foldl' foldMatches 0 matches)
+  putStrLn $ "From results: " <> show (L.foldl' foldMatches 0 matches')
