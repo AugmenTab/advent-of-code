@@ -110,9 +110,7 @@ resultFromText i txt =
 
 mkMatch :: MonadFail m => (Int, [T.Text]) -> m Match
 mkMatch (i, (f:s:[])) = do
-  f' <- moveFromText i f
-  s' <- moveFromText i s
-  pure (f', s')
+  (,) <$> moveFromText i f <*> moveFromText i s
 
 mkMatch (i, _) = fail $ "Bad input on line " <> show i
 
