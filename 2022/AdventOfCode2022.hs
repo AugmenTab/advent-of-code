@@ -3,6 +3,7 @@ module AdventOfCode2022 where
 
 import           Data.Foldable (foldlM)
 import qualified Data.List as L
+import qualified Data.List.Split as Split
 import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe, mapMaybe, maybe)
 import qualified Data.Set as Set
@@ -141,20 +142,34 @@ day03 = do
   lines <- L.lines <$> readFile "data/2022/day03.txt"
 
   -- Part 1
-  sharedItems <- foldlM foldPriority 0 lines
+  sharedItems <- foldlM foldPriority 0 $ findSharedItem <$> lines
   putStrLn $ show sharedItems
 
-foldPriority :: MonadFail m => Int -> String -> m Int
-foldPriority acc str = do
+  -- Part 2
+  badges <-
+    foldlM foldPriority 0 $ findBadgeItem <$> Split.chunksOf 3 lines
+  putStrLn $ show badges
+
+foldPriority :: MonadFail m => Int -> Maybe Char -> m Int
+foldPriority acc item = do
     maybe (fail "Could not determine priority") (pure . (+) acc)
-  $ flip Map.lookup priorityMap =<< findSharedItem str
+  $ flip Map.lookup priorityMap =<< item
 
 findSharedItem :: String -> Maybe Char
-findSharedItem str = do
+findSharedItem str =
   let half = div (L.length str) 2
       firstPack = Set.fromList $ L.take half str
       secondPack = Set.fromList $ L.drop half str
    in listToMaybe . Set.toList $ Set.intersection firstPack secondPack
+
+findBadgeItem :: [String] -> Maybe Char
+findBadgeItem packs =
+  if L.length packs /= 3
+     then Nothing
+     else   listToMaybe
+          . Set.toList
+          . L.foldl1' Set.intersection
+          $ Set.fromList <$> packs
 
 priorityMap :: Map.Map Char Int
 priorityMap = Map.fromList . flip L.zip [1..] $ ['a'..'z'] <> ['A'..'Z']
