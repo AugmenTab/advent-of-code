@@ -8,6 +8,9 @@ import           Data.Maybe (listToMaybe, mapMaybe, maybe)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 
+--------------------------------------------------------------------------------
+  -- Day 01
+--------------------------------------------------------------------------------
 day01 :: IO ()
 day01 = do
   fileData <- readFile "data/2022/day01.txt"
@@ -16,8 +19,28 @@ day01 = do
       getCalories = fmap (sumCalories . T.lines) . T.splitOn "\n\n" . T.pack
       allCalories = reverse . L.sort $ getCalories fileData
 
+  -- Part 1:
   putStrLn $ "Most calories: " <> show (listToMaybe allCalories)
+
+  -- Part 2:
   putStrLn $ "Top 3 calories: " <> show (sum $ L.take 3 allCalories)
+
+--------------------------------------------------------------------------------
+  -- Day 02
+--------------------------------------------------------------------------------
+day02 :: IO ()
+day02 = do
+  lines <- T.lines . T.pack <$> readFile "data/2022/day02.txt"
+
+  let indexed = fmap (T.splitOn " ") <$> L.zip [1..] lines
+
+  -- Part 1
+  matches  <- mapM mkMatch indexed
+  putStrLn $ "From moves: " <> show (L.foldl' foldMatches 0 matches)
+
+  -- Part 2
+  matches' <- mapM mkMatchWithResult indexed
+  putStrLn $ "From results: " <> show (L.foldl' foldMatches 0 matches')
 
 data Move
   = Rock
@@ -110,17 +133,16 @@ mkMatchWithResult (i, _) = fail $ "Bad input on line " <> show i
 foldMatches :: Int -> Match -> Int
 foldMatches acc match@(o, p) = acc + pointsForMatch match + pointsForMove p
 
-day02 :: IO ()
-day02 = do
-  lines <- T.lines . T.pack <$> readFile "data/2022/day02.txt"
+--------------------------------------------------------------------------------
+  -- Day 03
+--------------------------------------------------------------------------------
+day03 :: IO ()
+day03 = do
+  lines <- L.lines <$> readFile "data/2022/day03.txt"
 
-  let indexed = fmap (T.splitOn " ") <$> L.zip [1..] lines
-
-  matches  <- mapM mkMatch indexed
-  matches' <- mapM mkMatchWithResult indexed
-
-  putStrLn $ "From moves: " <> show (L.foldl' foldMatches 0 matches)
-  putStrLn $ "From results: " <> show (L.foldl' foldMatches 0 matches')
+  -- Part 1
+  sharedItems <- foldlM foldPriority 0 lines
+  putStrLn $ show sharedItems
 
 foldPriority :: MonadFail m => Int -> String -> m Int
 foldPriority acc str = do
@@ -136,9 +158,3 @@ findSharedItem str = do
 
 priorityMap :: Map.Map Char Int
 priorityMap = Map.fromList . flip L.zip [1..] $ ['a'..'z'] <> ['A'..'Z']
-
-day03 :: IO ()
-day03 = do
-  lines <- L.lines <$> readFile "data/2022/day03.txt"
-  sharedItems <- foldlM foldPriority 0 lines
-  putStrLn $ show sharedItems
