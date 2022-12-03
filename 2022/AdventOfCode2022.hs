@@ -1,8 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module AdventOfCode2022 where
 
+import           Data.Foldable (foldlM)
 import qualified Data.List as L
-import           Data.Maybe (listToMaybe, mapMaybe)
+import qualified Data.Map as Map
+import           Data.Maybe (listToMaybe, mapMaybe, maybe)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 
 day01 :: IO ()
@@ -118,3 +121,24 @@ day02 = do
 
   putStrLn $ "From moves: " <> show (L.foldl' foldMatches 0 matches)
   putStrLn $ "From results: " <> show (L.foldl' foldMatches 0 matches')
+
+foldPriority :: MonadFail m => Int -> String -> m Int
+foldPriority acc str = do
+    maybe (fail "Could not determine priority") (pure . (+) acc)
+  $ flip Map.lookup priorityMap =<< findSharedItem str
+
+findSharedItem :: String -> Maybe Char
+findSharedItem str = do
+  let half = div (L.length str) 2
+      firstPack = Set.fromList $ L.take half str
+      secondPack = Set.fromList $ L.drop half str
+   in listToMaybe . Set.toList $ Set.intersection firstPack secondPack
+
+priorityMap :: Map.Map Char Int
+priorityMap = Map.fromList . flip L.zip [1..] $ ['a'..'z'] <> ['A'..'Z']
+
+day03 :: IO ()
+day03 = do
+  lines <- L.lines <$> readFile "data/2022/day03.txt"
+  sharedItems <- foldlM foldPriority 0 lines
+  putStrLn $ show sharedItems
