@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 module AdventOfCode2022 where
 
 import           Data.Foldable (foldlM)
@@ -179,19 +178,39 @@ priorityMap = Map.fromList . flip L.zip [1..] $ ['a'..'z'] <> ['A'..'Z']
 day04 :: IO ()
 day04 = do
   lines <- T.lines . T.pack <$> readFile "data/2022/day04.txt"
-  overlaps <-
-      foldlM foldOverlapping 0
-    $ T.split (flip elem [ '-', ',' ]) <$> lines
 
-  putStrLn $ show overlaps
+  let split = T.split (flip elem [ '-', ',' ]) <$> lines
 
-foldOverlapping :: MonadFail m => Int -> [T.Text] -> m Int
-foldOverlapping acc (a:b:c:d:[]) = do
-  let a1 = [read (T.unpack a)..read (T.unpack b)] :: [Int]
-      a2 = [read (T.unpack c)..read (T.unpack d)] :: [Int]
+  -- Part 1
+  containsCount <- foldlM foldContaining 0 split
+  putStrLn $ show containsCount
+
+  -- Part 2
+  overlapsCount <- foldlM foldOverlapping 0 split
+  putStrLn $ show overlapsCount
+
+foldContaining :: MonadFail m => Int -> [T.Text] -> m Int
+foldContaining acc (a:b:c:d:[]) = do
+  let (a1, a2) = pairRanges a b c d
 
   if L.isInfixOf a1 a2 || L.isInfixOf a2 a1
      then pure $ acc + 1
      else pure acc
 
-foldOverlapping _ _ = fail "Unexpected number of elements in assignment."
+foldContaining _ _ = fail "Unexpected number of elements in assignment 1."
+
+foldOverlapping :: MonadFail m => Int -> [T.Text] -> m Int
+foldOverlapping acc (a:b:c:d:[]) = do
+  let (a1, a2) = pairRanges a b c d
+
+  if null $ L.intersect a1 a2
+     then pure acc
+     else pure $ acc + 1
+
+foldOverlapping _ txt = fail $ show txt
+
+pairRanges :: T.Text -> T.Text -> T.Text -> T.Text -> ([Int], [Int])
+pairRanges a b c d =
+  ( [read (T.unpack a)..read (T.unpack b)]
+  , [read (T.unpack c)..read (T.unpack d)]
+  )
