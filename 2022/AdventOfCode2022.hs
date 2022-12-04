@@ -178,39 +178,29 @@ priorityMap = Map.fromList . flip L.zip [1..] $ ['a'..'z'] <> ['A'..'Z']
 day04 :: IO ()
 day04 = do
   lines <- T.lines . T.pack <$> readFile "data/2022/day04.txt"
-
-  let split = T.split (flip elem [ '-', ',' ]) <$> lines
+  pairedRanges <- mapM pairRanges $ T.split (flip elem [ '-', ',' ]) <$> lines
 
   -- Part 1
-  containsCount <- foldlM foldContaining 0 split
-  putStrLn $ show containsCount
+  putStrLn . show $ L.foldl' foldContaining 0 pairedRanges
 
   -- Part 2
-  overlapsCount <- foldlM foldOverlapping 0 split
-  putStrLn $ show overlapsCount
+  putStrLn . show $ L.foldl' foldOverlapping 0 pairedRanges
 
-foldContaining :: MonadFail m => Int -> [T.Text] -> m Int
-foldContaining acc (a:b:c:d:[]) = do
-  let (a1, a2) = pairRanges a b c d
+pairRanges :: MonadFail m => [T.Text] -> m ([Int], [Int])
+pairRanges (a:b:c:d:[]) =
+  pure ( [ read (T.unpack a)..read (T.unpack b) ]
+       , [ read (T.unpack c)..read (T.unpack d) ]
+       )
 
-  if L.isInfixOf a1 a2 || L.isInfixOf a2 a1
-     then pure $ acc + 1
-     else pure acc
+pairRanges txt =
+  fail $ "Unexpected number of elements in assignment: " <> show txt
 
-foldContaining _ _ = fail "Unexpected number of elements in assignment 1."
+foldContaining :: Int -> ([Int], [Int]) -> Int
+foldContaining acc (a1, a2)
+  | L.isInfixOf a1 a2 || L.isInfixOf a2 a1 = acc + 1
+  | otherwise                              = acc
 
-foldOverlapping :: MonadFail m => Int -> [T.Text] -> m Int
-foldOverlapping acc (a:b:c:d:[]) = do
-  let (a1, a2) = pairRanges a b c d
-
-  if null $ L.intersect a1 a2
-     then pure acc
-     else pure $ acc + 1
-
-foldOverlapping _ txt = fail $ show txt
-
-pairRanges :: T.Text -> T.Text -> T.Text -> T.Text -> ([Int], [Int])
-pairRanges a b c d =
-  ( [read (T.unpack a)..read (T.unpack b)]
-  , [read (T.unpack c)..read (T.unpack d)]
-  )
+foldOverlapping :: Int -> ([Int], [Int]) -> Int
+foldOverlapping acc (a1, a2)
+  | null (L.intersect a1 a2) = acc
+  | otherwise                = acc + 1
