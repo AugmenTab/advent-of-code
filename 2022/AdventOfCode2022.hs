@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module AdventOfCode2022 where
 
 import           Data.Foldable (foldlM)
@@ -171,3 +172,26 @@ findBadgeItem packs =
 
 priorityMap :: Map.Map Char Int
 priorityMap = Map.fromList . flip L.zip [1..] $ ['a'..'z'] <> ['A'..'Z']
+
+--------------------------------------------------------------------------------
+  -- Day 04
+--------------------------------------------------------------------------------
+day04 :: IO ()
+day04 = do
+  lines <- T.lines . T.pack <$> readFile "data/2022/day04.txt"
+  overlaps <-
+      foldlM foldOverlapping 0
+    $ T.split (flip elem [ '-', ',' ]) <$> lines
+
+  putStrLn $ show overlaps
+
+foldOverlapping :: MonadFail m => Int -> [T.Text] -> m Int
+foldOverlapping acc (a:b:c:d:[]) = do
+  let a1 = [read (T.unpack a)..read (T.unpack b)] :: [Int]
+      a2 = [read (T.unpack c)..read (T.unpack d)] :: [Int]
+
+  if L.isInfixOf a1 a2 || L.isInfixOf a2 a1
+     then pure $ acc + 1
+     else pure acc
+
+foldOverlapping _ _ = fail "Unexpected number of elements in assignment."
