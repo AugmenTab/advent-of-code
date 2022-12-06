@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module AdventOfCode2022 where
 
+import qualified Data.Char as C
 import           Data.Foldable (foldlM)
 import qualified Data.List as L
 import qualified Data.List.Split as Split
@@ -204,3 +206,39 @@ foldOverlapping :: Int -> ([Int], [Int]) -> Int
 foldOverlapping acc (a1, a2)
   | null (L.intersect a1 a2) = acc
   | otherwise                = acc + 1
+
+--------------------------------------------------------------------------------
+  -- Day 05
+--------------------------------------------------------------------------------
+day05 :: IO ()
+day05 = do
+  lines  <- L.lines <$> readFile "data/2022/day05.txt"
+  shifts <- mapM mkMove $ L.words <$> L.drop 10 lines
+  cargo  <-   mkInitialCargo
+            . fmap (mapMaybe (listToMaybe . L.filter (C.isAlpha)))
+            . L.transpose
+            . fmap (Split.chunksOf 4)
+            $ L.take 8 lines
+
+  let shiftedCargo = L.foldl' shiftCargo cargo shifts
+
+  -- Part 1
+  putStrLn . show . mapMaybe listToMaybe $ Map.elems shiftedCargo
+
+type Shift = (Int, Int, Int) -- Move X from Y to Z
+
+type CargoMap = Map.Map Int String
+
+mkMove :: MonadFail m => [String] -> m Shift
+mkMove (_:x:_:y:_:z:[]) = pure (read x, read y, read z)
+mkMove line = fail $ "Could not read moves for line: " <> show line
+
+mkInitialCargo :: MonadFail m => [String] -> m CargoMap
+mkInitialCargo cargo =
+  if L.length cargo == 9
+     then pure . Map.fromList $ zip [1..] cargo
+     else fail $ "Cargo only has " <> show (L.length cargo) <> " stacks"
+
+shiftCargo :: CargoMap -> Shift -> CargoMap
+shiftCargo cargo (move, from, to) =
+  cargo
