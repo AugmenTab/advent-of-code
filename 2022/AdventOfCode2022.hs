@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 module AdventOfCode2022 where
 
+import qualified Data.Bool as B
 import qualified Data.Char as C
 import           Data.Foldable (foldlM)
 import qualified Data.List as L
@@ -220,14 +220,22 @@ day05 = do
             . fmap (Split.chunksOf 4)
             $ L.take 8 lines
 
-  shiftedCargo <- foldlM shiftCargo cargo shifts
-
   -- Part 1
+  shiftedCargo <- foldlM (shiftCargo CrateMover9000) cargo shifts
   putStrLn . show . mapMaybe listToMaybe $ Map.elems shiftedCargo
+
+  -- Part 2
+  shiftedCargo' <- foldlM (shiftCargo CrateMover9001) cargo shifts
+  putStrLn . show . mapMaybe listToMaybe $ Map.elems shiftedCargo'
 
 type Shift = (Int, Int, Int) -- Move X from Y to Z
 
 type CargoMap = Map.Map Int String
+
+data CraneModel
+  = CrateMover9000
+  | CrateMover9001
+  deriving (Eq)
 
 mkMove :: MonadFail m => [String] -> m Shift
 mkMove (_:x:_:y:_:z:[]) = pure (read x, read y, read z)
@@ -239,14 +247,14 @@ mkInitialCargo cargo =
      then pure . Map.fromList $ zip [1..] cargo
      else fail $ "Cargo only has " <> show (L.length cargo) <> " stacks"
 
-shiftCargo :: MonadFail m => CargoMap -> Shift -> m CargoMap
-shiftCargo cargo (move, from, to) = do
+shiftCargo :: MonadFail m => CraneModel -> CargoMap -> Shift -> m CargoMap
+shiftCargo crane cargo (move, from, to) = do
   toShift   <- maybe (fail "No element for to value") pure $ Map.lookup to cargo
   fromShift <-
     maybe (fail "No element for shift value") pure $ Map.lookup from cargo
 
-  let stackCargo toStack =
-        Just $ (reverse $ L.take move fromShift) <> toStack
+  let stackingOrder = B.bool id reverse $ crane == CrateMover9000
+      stackCargo toStack =
+        Just $ (stackingOrder $ L.take move fromShift) <> toStack
 
-  pure . Map.update (Just . L.drop move) from
-       $ Map.update stackCargo to cargo
+  pure . Map.update (Just . L.drop move) from $ Map.update stackCargo to cargo
