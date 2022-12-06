@@ -265,9 +265,14 @@ shiftCargo crane cargo (move, from, to) = do
 day06 :: IO ()
 day06 = do
   stream <- readFile "data/2022/day06.txt"
-  putStrLn . show $ findMarker 4 stream
 
-findMarker :: Int -> String -> Int
-findMarker pos stream
-  | (== 4) . Set.size . Set.fromList $ L.take 4 stream = pos
-  | otherwise = findMarker (pos + 1) (L.drop 1 stream)
+  -- Part 1
+  putStrLn . show $ findMarker 4 4 stream
+
+  -- Part 2
+  putStrLn . show $ findMarker 14 14 stream
+
+findMarker :: Int -> Int -> String -> Int
+findMarker size pos stream
+  | (== size) . Set.size . Set.fromList $ L.take size stream = pos
+  | otherwise = findMarker size (pos + 1) (L.drop 1 stream)
