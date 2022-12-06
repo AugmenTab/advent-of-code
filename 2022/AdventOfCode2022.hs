@@ -258,3 +258,16 @@ shiftCargo crane cargo (move, from, to) = do
         Just $ (stackingOrder $ L.take move fromShift) <> toStack
 
   pure . Map.update (Just . L.drop move) from $ Map.update stackCargo to cargo
+
+--------------------------------------------------------------------------------
+  -- Day 06
+--------------------------------------------------------------------------------
+day06 :: IO ()
+day06 = do
+  stream <- readFile "data/2022/day06.txt"
+  putStrLn . show $ findMarker 4 stream
+
+findMarker :: Int -> String -> Int
+findMarker pos stream
+  | (== 4) . Set.size . Set.fromList $ L.take 4 stream = pos
+  | otherwise = findMarker (pos + 1) (L.drop 1 stream)
