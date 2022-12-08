@@ -7,9 +7,10 @@ import           Data.Foldable (foldlM)
 import qualified Data.List as L
 import qualified Data.List.Split as Split
 import qualified Data.Map as Map
-import           Data.Maybe (listToMaybe, mapMaybe, maybe)
+import           Data.Maybe (catMaybes, listToMaybe, mapMaybe, maybe)
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import           Text.Read (readMaybe)
 
 --------------------------------------------------------------------------------
   -- Day 01
@@ -276,3 +277,93 @@ findMarker :: Int -> Int -> String -> Int
 findMarker size pos stream
   | (== size) . Set.size . Set.fromList $ L.take size stream = pos
   | otherwise = findMarker size (pos + 1) (L.drop 1 stream)
+
+--------------------------------------------------------------------------------
+  -- Day 07
+--------------------------------------------------------------------------------
+day07 :: IO ()
+day07 = do
+  lines <- T.lines . T.pack <$> readFile "data/2022/day07.txt"
+  cmds  <- catMaybes <$> mapM mkFileLine lines
+  testCmds <- catMaybes <$> mapM mkFileLine testData
+
+  let fileSizeMap = mkFileSizeMap Map.empty [] cmds
+      testMap = mkFileSizeMap Map.empty [] testCmds
+
+  -- Part 1
+  putStrLn . show . sum . L.filter (100000 >) $ Map.elems fileSizeMap
+  putStrLn $ show . sum . L.filter (100000 >) $ Map.elems testMap
+
+data Command
+  = CD_In T.Text
+  | CD_Out
+  | Dir T.Text
+  | File Int
+
+mkFileLine :: MonadFail m => T.Text -> m (Maybe Command)
+mkFileLine txt =
+  case T.words txt of
+    (a:b:c:[]) | a == "$", b == "cd" ->
+      pure . Just . B.bool (CD_In c) CD_Out $ c == ".."
+
+    (a:b:[])
+      | a == "$"   -> pure Nothing
+      | a == "dir" -> pure . Just $ Dir b
+      | otherwise  ->
+        maybe (fail $ "Could not read file " <> T.unpack b)
+              (pure . Just . File)
+              (readMaybe $ T.unpack a)
+
+    _ -> fail $ "Unexpected elements in command line"
+
+type FileSizeMap = Map.Map T.Text Int
+type CommandStack = [Command]
+
+mkFileSizeMap :: FileSizeMap -> CommandStack -> [Command] -> FileSizeMap
+mkFileSizeMap dirMap stack [] =
+  fst . collapseStack 0 dirMap $ stack <> [ CD_In "/" ]
+
+mkFileSizeMap dirMap stack (cmd:cmds) =
+  case cmd of
+    CD_Out ->
+      let (newDirMap, newStack) = collapseStack 0 dirMap stack
+       in mkFileSizeMap newDirMap newStack cmds
+
+    _ -> mkFileSizeMap dirMap (cmd : stack) cmds
+
+collapseStack :: Int -> FileSizeMap -> CommandStack -> (FileSizeMap, CommandStack)
+collapseStack count dirMap []         = (Map.insert "/" count dirMap, [])
+collapseStack count dirMap (cmd:cmds) =
+  case cmd of
+    CD_Out   -> collapseStack count dirMap cmds -- This should never happen
+    CD_In  d -> (Map.insert d count dirMap, cmds)
+    File   s -> collapseStack (count + s) dirMap cmds
+    Dir    d ->
+      collapseStack (count + Map.findWithDefault 0 d dirMap) dirMap cmds
+
+testData :: [T.Text]
+testData =
+  [ "$ cd /"
+  , "$ ls"
+  , "dir a"
+  , "14848514 b.txt"
+  , "8504156 c.dat"
+  , "dir d"
+  , "$ cd a"
+  , "$ ls"
+  , "dir e"
+  , "29116 f"
+  , "2557 g"
+  , "62596 h.lst"
+  , "$ cd e"
+  , "$ ls"
+  , "584 i"
+  , "$ cd .."
+  , "$ cd .."
+  , "$ cd d"
+  , "$ ls"
+  , "4060174 j"
+  , "8033020 d.log"
+  , "5626152 d.ext"
+  , "7214296 k"
+  ]
