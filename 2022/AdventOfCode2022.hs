@@ -367,3 +367,25 @@ testData =
   , "5626152 d.ext"
   , "7214296 k"
   ]
+
+--------------------------------------------------------------------------------
+  -- Day 08
+--------------------------------------------------------------------------------
+day08 :: IO ()
+day08 = do
+  lines <- L.lines <$> readFile "data/2022/day08.txt"
+
+  let rows = fmap C.digitToInt <$> testGrid
+      columns = fmap C.digitToInt <$> L.transpose testGrid
+      paired = (\row -> (row, columns)) <$> rows
+
+  putStrLn $ show paired
+
+testGrid :: [String]
+testGrid =
+  [ "30373"
+  , "25512"
+  , "65332"
+  , "33549"
+  , "35390"
+  ]
